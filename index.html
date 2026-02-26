@@ -1,1 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CNR Revival — Cops n Robbers</title>
+<meta name="description" content="Community revival of Cops n Robbers. Reverse-engineering progress, roadmap, and contribution info." />
+<style>
+  :root{
+    --bg:#0f1720; --card:#0b1220; --muted:#97a0b3;
+    --accent:#6ee7b7; --accent-2:#60a5fa; --glass:rgba(255,255,255,0.04);
+    --card-pad:22px; --radius:14px;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  html{
+    height: 100%;
+  }
+  body{
+    margin:0;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(1200px 600px at 10% 10%, rgba(96,165,250,0.06), transparent 6%),
+      linear-gradient(180deg, #071226 0%, var(--bg) 60%);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
+    color:#e6eef8;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    padding:40px; display:flex; justify-content:center; align-items:flex-start;
+    font-size:15px;
+    min-height: 100vh;
+  }
+  .wrap{max-width:1100px; width:100%; display:grid; grid-template-columns:1fr 380px; gap:22px}
+  header{grid-column:1 / -1; display:grid; gap:18px}
+  .header-top{display:flex; align-items:center; gap:18px}
+  .header-buttons{display:flex; gap:8px; flex-wrap:wrap}
+  .logo{width:64px; height:64px; border-radius:12px; background:linear-gradient(135deg,var(--accent-2),var(--accent));
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:#04233a; font-size:20px;
+    box-shadow:0 6px 22px rgba(12,22,40,0.6), inset 0 -6px 18px rgba(255,255,255,0.02);}
+  h1{margin:0; font-size:20px}
+  .subtitle{color:var(--muted); font-size:13px; margin-top:4px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.008));
+    border-radius:var(--radius); padding:var(--card-pad); box-shadow:0 8px 40px rgba(2,8,20,0.6); border:1px solid rgba(255,255,255,0.03)}
+  .intro{line-height:1.5}
+  .hero-cta{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap}
+  .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#052233; padding:10px 14px; border-radius:10px; font-weight:600; text-decoration:none}
+  .ghost{background:transparent; color:var(--muted); padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); text-decoration:none}
+  .danger{border-color:rgba(255,99,99,0.35); color:#ffbdbd}
+  .progress-wrap{margin-top:18px}
+  .progress-bar{width:100%; height:14px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,0.02)}
+  .progress-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .4s ease}
+  .task-list{margin-top:14px; display:grid; gap:10px}
+  .task{display:flex; gap:12px; align-items:flex-start; background:var(--glass); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.02)}
+  .task input[type="checkbox"]{transform:scale(1.15); margin-top:2px}
+  .task .meta{flex:1}
+  .task .meta b{display:block}
+  .task small{color:var(--muted)}
+  .tags{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap}
+  .tag{background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:999px; color:var(--muted); font-size:12px}
+  .panel h3{margin:0 0 10px 0}
+  .panel p{color:var(--muted); margin:0 0 10px 0}
+  .repo-list{display:flex; flex-direction:column; gap:10px}
+  .repo{display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:10px; background:rgba(255,255,255,0.02)}
+  .small{font-size:13px; color:var(--muted)}
+  footer{grid-column:1 / -1; margin-top:10px; color:var(--muted); font-size:13px; text-align:center}
+  .hidden{display:none !important}
+  .disabled{opacity:0.55; cursor:not-allowed}
+  @media (max-width:980px){.wrap{grid-template-columns:1fr} body{padding:20px}}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="header-top">
+        <img class="logo" src="icon.png" alt="CNR Revival Logo">
+        <div style="flex:1">
+          <h1>CNR Revival — Cops n Robbers</h1>
+          <div class="subtitle">Reverse-engineering and multiplayer restoration • <span id="status-badge">Private • In progress</span></div>
+        </div>
+      </div>
+      <div class="header-buttons">
+        <a class="btn" href="https://github.com/Jacqueb-1337/copsnrobbers" target="_blank" rel="noopener">GitHub Repo</a>
+      </div>
+    </header>
 
+    <!-- left column -->
+    <main class="card">
+      <section class="intro">
+        <p><strong>Project scope:</strong> community effort to restore online functionality for <em>Cops n Robbers</em> by implementing modern matchmaking and networking while preserving original gameplay behavior.</p>
+        <div class="hero-cta">
+          <a class="ghost" href="#progress">Progress tracker</a>
+          <a class="ghost" href="#contribute">Contributions</a>
+        </div>
+      </section>
+
+      <section id="progress" class="progress-wrap">
+        <h2 style="margin-top:18px">Progress</h2>
+        <div class="small" style="margin-top:6px">Completion: <strong id="percent">0%</strong></div>
+        <div style="margin-top:10px" class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="task-list" id="tasks"></div>
+
+      </section>
+
+      <section id="contribute" style="margin-top:20px">
+        <h2>Roadmap</h2>
+        <ul class="small" style="line-height:1.6">
+          <li><strong>Short-term:</strong> Photon ↔ custom UDP translation, join/host handshake, NAT traversal.</li>
+          <li><strong>Mid-term:</strong> security checks, automated tests, CI, packaging and signing.</li>
+          <li><strong>Long-term:</strong> documentation, 64-bit compatibility approach, public open-source release.</li>
+        </ul>
+
+        <h3 style="margin-top:12px">Contributions</h3>
+        <div class="small">
+          <p>Areas of interest: native debugging, IL2CPP/C# patching, protocol implementation, and frontend tooling for server control. Issues and PRs will be tracked in the project repository.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- right column -->
+    <aside class="card panel">
+      <h3>Quick status</h3>
+      <p class="small">Key milestones and their state.</p>
+
+      <div class="repo-list">
+        <div class="repo"><div><div style="font-weight:600">Deobfuscated class names</div><div class="small">Completed</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Injected custom C# DLL</div><div class="small">Completed</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Discovery packets</div><div class="small">Completed (app ↔ custom matchmaking)</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Custom room list</div><div class="small">List populated from server</div></div><div class="tag">Partial</div></div>
+        <div class="repo"><div><div style="font-weight:600">Room loading / joining</div><div class="small">Pending implementation</div></div><div class="tag">Todo</div></div>
+        <div class="repo"><div><div style="font-weight:600">Complete handshake</div><div class="small">Pending</div></div><div class="tag">Todo</div></div>
+      </div>
+
+      <div style="margin-top:18px">
+        <h3>Release plan</h3>
+        <p class="small">Open-source release when networking is functional and packaging/signing are ready. Staged rollout is expected.</p>
+      </div>
+    </aside>
+
+    <footer class="small card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>© CNR Revival</div>
+        <div><a href="https://github.com/Jacqueb-1337/copsnrobbers" target="_blank" rel="noopener">github.com/Jacqueb-1337/copsnrobbers</a></div>
+      </div>
+    </footer>
+  </div>
+
+<script>
+/* ---------------- State ---------------- */
+const initialTasks = [
+  {id:1, title:"Deobfuscated class names", notes:"Mapped runtime types", done:true, tags:["analysis","reverse"]},
+  {id:2, title:"Injected custom C# DLL", notes:"Custom logic executing", done:true, tags:["injection","csharp"]},
+  {id:3, title:"Discovery packets working", notes:"App ↔ matchmaking server", done:true, tags:["network","udp"]},
+  {id:4, title:"Custom room listing populated", notes:"List rendered from server", done:true, tags:["ui","partial"]},
+  {id:5, title:"Translate Photon ↔ custom UDP", notes:"Implement packet mapping", done:false, tags:["network","protocol"]},
+  {id:6, title:"Implement room loading & joining", notes:"Join/host flow + handshakes", done:false, tags:["network","handshake"]},
+  {id:7, title:"Complete handshake & live matches", notes:"End-to-end validation", done:false, tags:["test","net"]},
+  {id:8, title:"Automated tests & CI", notes:"Unit/integration + CI", done:false, tags:["ci","test"]},
+  {id:9, title:"Docs, packaging, license", notes:"README, CONTRIBUTING, license", done:false, tags:["docs","legal"]},
+  {id:10, title:"Public open-source release", notes:"Artifacts + tags", done:false, tags:["release","oss"]},
+];
+
+const tasksEl = document.getElementById('tasks');
+const progressFill = document.getElementById('progressFill');
+const percentEl = document.getElementById('percent');
+
+function escapeHtml(s){
+  if(!s) return '';
+  return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function calcPercent(list){
+  const total = list.length || 1;
+  const done = list.filter(t=>t.done).length;
+  return Math.round(done/total*100);
+}
+
+function render(){
+  // Render tasks
+  tasksEl.innerHTML = '';
+  initialTasks.forEach(t=>{
+    const div = document.createElement('div');
+    div.className = 'task';
+    div.innerHTML = `
+      <input type="checkbox" ${t.done? 'checked':''} disabled />
+      <div class="meta">
+        <b class="title">${escapeHtml(t.title)}</b>
+        <small class="notes">${escapeHtml(t.notes||'')}</small>
+        <div class="tags">${(t.tags||[]).map(x=>'<span class="tag">'+escapeHtml(x)+'</span>').join('')}</div>
+      </div>
+    `;
+    tasksEl.appendChild(div);
+  });
+
+  const percent = calcPercent(initialTasks);
+  progressFill.style.width = percent + '%';
+  percentEl.textContent = percent + '%';
+}
+
+/* init */
+render();
+</script>
+</body>
+</html>
