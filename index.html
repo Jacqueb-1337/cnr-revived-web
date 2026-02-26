@@ -76,11 +76,12 @@
         <img class="logo" src="icon.png" alt="CNR Revival Logo">
         <div style="flex:1">
           <h1>CNR Revival — Cops n Robbers</h1>
-          <div class="subtitle">Reverse-engineering and multiplayer restoration • <span id="status-badge">Private • In progress</span></div>
+          <div class="subtitle">Reverse-engineering and multiplayer restoration • <span id="status-badge">✅ Complete</span></div>
         </div>
       </div>
       <div class="header-buttons">
-        <a class="btn" href="https://github.com/Jacqueb-1337/copsnrobbers" target="_blank" rel="noopener">GitHub Repo</a>
+        <a class="btn" href="https://github.com/Jacqueb-1337/copsnrobbers/releases/latest/" target="_blank" rel="noopener">Download</a>
+        <a class="ghost" href="https://github.com/Jacqueb-1337/copsnrobbers" target="_blank" rel="noopener">GitHub Repo</a>
       </div>
     </header>
 
@@ -104,16 +105,10 @@
       </section>
 
       <section id="contribute" style="margin-top:20px">
-        <h2>Roadmap</h2>
-        <ul class="small" style="line-height:1.6">
-          <li><strong>Short-term:</strong> Photon ↔ custom UDP translation, join/host handshake, NAT traversal.</li>
-          <li><strong>Mid-term:</strong> security checks, automated tests, CI, packaging and signing.</li>
-          <li><strong>Long-term:</strong> documentation, 64-bit compatibility approach, public open-source release.</li>
-        </ul>
-
-        <h3 style="margin-top:12px">Contributions</h3>
-        <div class="small">
-          <p>Areas of interest: native debugging, IL2CPP/C# patching, protocol implementation, and frontend tooling for server control. Issues and PRs will be tracked in the project repository.</p>
+        <h2>It's done!</h2>
+        <p class="small" style="line-height:1.6">All milestones are complete. Multiplayer is fully restored using a custom Node.js server — Photon was tricked into TCP mode so no UDP translation was needed. A generic mod loader is baked into the APK, and mods (including a full in-game HUD editor) are loaded dynamically from the device at runtime.</p>
+        <div class="hero-cta">
+          <a class="btn" href="https://github.com/Jacqueb-1337/copsnrobbers/releases/latest/" target="_blank" rel="noopener">Download latest release</a>
         </div>
       </section>
     </main>
@@ -127,14 +122,15 @@
         <div class="repo"><div><div style="font-weight:600">Deobfuscated class names</div><div class="small">Completed</div></div><div class="tag">Done</div></div>
         <div class="repo"><div><div style="font-weight:600">Injected custom C# DLL</div><div class="small">Completed</div></div><div class="tag">Done</div></div>
         <div class="repo"><div><div style="font-weight:600">Discovery packets</div><div class="small">Completed (app ↔ custom matchmaking)</div></div><div class="tag">Done</div></div>
-        <div class="repo"><div><div style="font-weight:600">Custom room list</div><div class="small">List populated from server</div></div><div class="tag">Partial</div></div>
-        <div class="repo"><div><div style="font-weight:600">Room loading / joining</div><div class="small">Pending implementation</div></div><div class="tag">Todo</div></div>
-        <div class="repo"><div><div style="font-weight:600">Complete handshake</div><div class="small">Pending</div></div><div class="tag">Todo</div></div>
+        <div class="repo"><div><div style="font-weight:600">Custom room list</div><div class="small">Populated from Node.js server</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Room loading / joining</div><div class="small">Complete — Photon runs in TCP mode</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Live matches end-to-end</div><div class="small">Full gameplay validated</div></div><div class="tag">Done</div></div>
       </div>
 
       <div style="margin-top:18px">
-        <h3>Release plan</h3>
-        <p class="small">Open-source release when networking is functional and packaging/signing are ready. Staged rollout is expected.</p>
+        <h3>Download</h3>
+        <p class="small">Patched APK, mod DLLs, and server are all available on the releases page.</p>
+        <a class="btn" style="display:inline-block;margin-top:10px" href="https://github.com/Jacqueb-1337/copsnrobbers/releases/latest/" target="_blank" rel="noopener">Latest release →</a>
       </div>
     </aside>
 
@@ -150,15 +146,15 @@
 /* ---------------- State ---------------- */
 const initialTasks = [
   {id:1, title:"Deobfuscated class names", notes:"Mapped runtime types", done:true, tags:["analysis","reverse"]},
-  {id:2, title:"Injected custom C# DLL", notes:"Custom logic executing", done:true, tags:["injection","csharp"]},
-  {id:3, title:"Discovery packets working", notes:"App ↔ matchmaking server", done:true, tags:["network","udp"]},
-  {id:4, title:"Custom room listing populated", notes:"List rendered from server", done:true, tags:["ui","partial"]},
-  {id:5, title:"Translate Photon ↔ custom UDP", notes:"Implement packet mapping", done:false, tags:["network","protocol"]},
-  {id:6, title:"Implement room loading & joining", notes:"Join/host flow + handshakes", done:false, tags:["network","handshake"]},
-  {id:7, title:"Complete handshake & live matches", notes:"End-to-end validation", done:false, tags:["test","net"]},
-  {id:8, title:"Automated tests & CI", notes:"Unit/integration + CI", done:false, tags:["ci","test"]},
-  {id:9, title:"Docs, packaging, license", notes:"README, CONTRIBUTING, license", done:false, tags:["docs","legal"]},
-  {id:10, title:"Public open-source release", notes:"Artifacts + tags", done:false, tags:["release","oss"]},
+  {id:2, title:"Injected custom C# DLL", notes:"Generic mod loader baked into APK", done:true, tags:["injection","csharp"]},
+  {id:3, title:"Discovery packets working", notes:"App ↔ custom matchmaking server", done:true, tags:["network","tcp"]},
+  {id:4, title:"Custom room listing populated", notes:"Room list rendered from Node.js server", done:true, tags:["ui","server"]},
+  {id:5, title:"Protocol implementation", notes:"Photon forced into TCP mode — Node.js handles all traffic natively", done:true, tags:["network","protocol"]},
+  {id:6, title:"Room loading & joining", notes:"Join/host flow + handshake complete", done:true, tags:["network","handshake"]},
+  {id:7, title:"Live matches end-to-end", notes:"Full gameplay over custom server validated", done:true, tags:["test","net"]},
+  {id:8, title:"HUD editor & mod system", notes:"In-game HUD position/scale editor + mod loader", done:true, tags:["mods","ui"]},
+  {id:9, title:"Docs & README", notes:"Setup instructions, mod loader docs, APK patching guide", done:true, tags:["docs"]},
+  {id:10, title:"Public release", notes:"Patched APK + server available on GitHub releases", done:true, tags:["release"]},
 ];
 
 const tasksEl = document.getElementById('tasks');
