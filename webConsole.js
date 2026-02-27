@@ -7,6 +7,17 @@
 'use strict';
 
 const http = require('http');
+const fs   = require('fs');
+const path = require('path');
+
+const mapsDir = path.join(__dirname, 'maps');
+if (!fs.existsSync(mapsDir)) fs.mkdirSync(mapsDir, { recursive: true });
+
+const CORS = {
+  'Access-Control-Allow-Origin':  '*',
+  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
 const MAX_BUFFER = 300;
 const WEB_PORT   = parseInt(process.env.WEB_PORT || '1337', 10);
@@ -321,6 +332,49 @@ function start(opts = {}) {
       res.write(`event: init\ndata: ${JSON.stringify(logBuffer.slice(-200))}\n\n`);
       sseClients.add(res);
       req.on('close', () => sseClients.delete(res));
+      return;
+    }
+
+    // ── Maps: GET/PUT /maps/<name>.json  (no new port — served from this console port) ──
+    if (req.method === 'OPTIONS' && url.startsWith('/maps')) {
+      res.writeHead(204, CORS); res.end(); return;
+    }
+
+    if (url === '/maps' || url === '/maps/') {
+      if (req.method !== 'GET') { res.writeHead(405, CORS); res.end(); return; }
+      try {
+        const files = fs.readdirSync(mapsDir).filter(f => f.endsWith('.json'));
+        res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(files));
+      } catch (e) { res.writeHead(500, CORS); res.end('error'); }
+      return;
+    }
+
+    const mapsMatch = url.match(/^\/maps\/([^/]+\.json)$/);
+    if (mapsMatch) {
+      const filename = mapsMatch[1].replace(/[^a-zA-Z0-9_.\-]/g, '_');
+      const filepath  = path.join(mapsDir, filename);
+
+      if (req.method === 'GET') {
+        if (!fs.existsSync(filepath)) { res.writeHead(404, CORS); res.end('not found'); return; }
+        const data = fs.readFileSync(filepath);
+        res.writeHead(200, { ...CORS, 'Content-Type': 'application/json', 'Content-Length': data.length });
+        res.end(data);
+
+      } else if (req.method === 'PUT') {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+          try {
+            const body = Buffer.concat(chunks).toString('utf8');
+            JSON.parse(body);  // reject non-JSON
+            fs.writeFileSync(filepath, body, 'utf8');
+            pushLog(`[Maps] uploaded ${filename} (${body.length} bytes)`);
+            res.writeHead(200, CORS); res.end('ok');
+          } catch (e) { res.writeHead(400, CORS); res.end('invalid JSON'); }
+        });
+
+      } else { res.writeHead(405, CORS); res.end(); }
       return;
     }
 
