@@ -13,9 +13,12 @@ const path = require('path');
 const mapsDir = path.join(__dirname, 'maps');
 if (!fs.existsSync(mapsDir)) fs.mkdirSync(mapsDir, { recursive: true });
 
+// In-memory room → mapUrl registry (host POSTs on create, clients GET on join)
+const roomMapUrls = {};
+
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -378,9 +381,40 @@ function start(opts = {}) {
       return;
     }
 
+    // ── Room registry ─────────────────────────────────────────────────
+    if (req.method === 'OPTIONS' && url.startsWith('/rooms')) {
+      res.writeHead(204, CORS); res.end(); return;
+    }
+
+    // POST /rooms  body: {room, mapUrl}  — host registers its room’s map URL
+    if (req.method === 'POST' && url === '/rooms') {
+      const chunks = [];
+      req.on('data', c => chunks.push(c));
+      req.on('end', () => {
+        try {
+          const { room, mapUrl } = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          if (!room || !mapUrl) { res.writeHead(400, CORS); res.end('missing room or mapUrl'); return; }
+          roomMapUrls[room] = mapUrl;
+          pushLog(`[Rooms] registered '${room}' -> ${mapUrl}`);
+          res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) { res.writeHead(400, CORS); res.end('invalid JSON'); }
+      });
+      return;
+    }
+
+    // GET /rooms/<name>  — client queries URL for a room by name
+    const roomMatch = url.match(/^\/rooms\/(.+)$/);
+    if (roomMatch && req.method === 'GET') {
+      const name = decodeURIComponent(roomMatch[1]);
+      const mapUrl = roomMapUrls[name] || null;
+      res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ mapUrl }));
+      return;
+    }
+
     res.writeHead(404); res.end('Not found');
   });
-
   httpServer.listen(WEB_PORT, '0.0.0.0', () => {
     pushLog(`[Web] Console listening on http://0.0.0.0:${WEB_PORT}  →  open http://localhost:${WEB_PORT}`);
   });
