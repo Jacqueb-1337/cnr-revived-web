@@ -77,6 +77,26 @@ button:hover{background:#2ea043}
     exit;
 }
 
+// ── AJAX: compute MD5 hash of a URL (server-side fetch) ────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'fetch_hash') {
+    header('Content-Type: application/json');
+    $url = trim($_POST['url'] ?? '');
+    $p   = parse_url($url);
+    if (!filter_var($url, FILTER_VALIDATE_URL) || !in_array($p['scheme'] ?? '', ['http','https'])) {
+        echo json_encode(['error' => 'Invalid URL']); exit;
+    }
+    $ctx  = stream_context_create(['http'=>['timeout'=>15],'https'=>['timeout'=>15]]);
+    $data = @file_get_contents($url, false, $ctx);
+    if ($data === false && function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true,CURLOPT_TIMEOUT=>15,CURLOPT_FOLLOWLOCATION=>true,CURLOPT_SSL_VERIFYPEER=>false]);
+        $data = curl_exec($ch); if ($data === false) $data = null; curl_close($ch);
+    }
+    if (!$data) { echo json_encode(['error' => 'Could not fetch URL']); exit; }
+    echo json_encode(['hash' => md5($data)]);
+    exit;
+}
+
 require __DIR__ . '/_db.php';
 
 $pdo    = db();
@@ -525,10 +545,12 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
         <form method="POST" style="display:inline;margin-left:4px">
           <input type="hidden" name="act" value="update_hash">
           <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
-          <input type="text" name="file_hash" placeholder="md5 hex" maxlength="32"
+          <input type="text" name="file_hash" id="fh-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>" placeholder="md5 hex" maxlength="32"
                  style="width:90px;font-size:11px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 4px"
                  value="<?= htmlspecialchars($c['file_hash'],ENT_QUOTES) ?>">
           <button class="action-btn" type="submit" style="font-size:11px">Set</button>
+          <button type="button" class="action-btn" style="font-size:11px;margin-left:2px"
+            onclick="calcHash('<?= htmlspecialchars($c['url'],ENT_QUOTES) ?>',document.getElementById('fh-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>'),this,true)">Calc</button>
         </form>
       </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
@@ -566,10 +588,12 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
         <form method="POST" style="display:inline;margin-left:4px">
           <input type="hidden" name="act" value="update_hash">
           <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
-          <input type="text" name="file_hash" placeholder="md5 hex" maxlength="32"
+          <input type="text" name="file_hash" id="fh-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>" placeholder="md5 hex" maxlength="32"
                  style="width:90px;font-size:11px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 4px"
                  value="<?= htmlspecialchars($c['file_hash'],ENT_QUOTES) ?>">
           <button class="action-btn" type="submit" style="font-size:11px">Set</button>
+          <button type="button" class="action-btn" style="font-size:11px;margin-left:2px"
+            onclick="calcHash('<?= htmlspecialchars($c['url'],ENT_QUOTES) ?>',document.getElementById('fh-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>'),this,true)">Calc</button>
         </form>
       </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
@@ -607,10 +631,12 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
         <form method="POST" style="display:inline;margin-left:4px">
           <input type="hidden" name="act" value="update_hash">
           <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
-          <input type="text" name="file_hash" placeholder="md5 hex" maxlength="32"
+          <input type="text" name="file_hash" id="fh-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>" placeholder="md5 hex" maxlength="32"
                  style="width:90px;font-size:11px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 4px"
                  value="<?= htmlspecialchars($c['file_hash'],ENT_QUOTES) ?>">
           <button class="action-btn" type="submit" style="font-size:11px">Set</button>
+          <button type="button" class="action-btn" style="font-size:11px;margin-left:2px"
+            onclick="calcHash('<?= htmlspecialchars($c['url'],ENT_QUOTES) ?>',document.getElementById('fh-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>'),this,true)">Calc</button>
         </form>
       </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
@@ -654,7 +680,7 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
         </div>
         <div class="form-row">
           <label>URL</label>
-          <input type="url" name="curl" placeholder="https://cdn.example.com/maps/rooftop.json" required>
+          <input type="url" name="curl" id="add-curl" placeholder="https://cdn.example.com/maps/rooftop.json" required>
         </div>
         <div id="cf-thumb" class="form-row">
           <label>Thumbnail</label>
@@ -663,8 +689,9 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
         </div>
         <div id="cf-hash" class="form-row">
           <label>MD5 hash</label>
-          <input type="text" name="file_hash" placeholder="32-char hex (optional)" maxlength="32" pattern="[a-fA-F0-9]{0,32}">
-          <small style="color:#8b949e;margin-left:8px">Leave blank to skip hash checking for this item</small>
+          <input type="text" name="file_hash" id="add-fhash" placeholder="auto-filled by Calc" maxlength="32" pattern="[a-fA-F0-9]{0,32}">
+          <button type="button" class="action-btn" style="margin-left:6px"
+            onclick="calcHash(document.getElementById('add-curl').value,document.getElementById('add-fhash'),this,false)">Calc from URL</button>
         </div>
         <div id="cf-mat" class="form-row" style="display:none">
           <label>Material name</label>
@@ -693,10 +720,30 @@ function showTab(name) {
     p.classList.toggle('active', p.id==='pane-'+name);
   });
 }
+function calcHash(url, inputEl, btn, autoSubmit) {
+  if (!url) { alert('Enter a URL first.'); return; }
+  var orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '…';
+  var fd = new FormData();
+  fd.append('act', 'fetch_hash'); fd.append('url', url);
+  fetch('admin.php', {method:'POST', body:fd})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if (d.hash) {
+        inputEl.value = d.hash;
+        if (autoSubmit) { inputEl.closest('form').submit(); }
+        else { btn.textContent = '✓'; btn.disabled = false; }
+      } else {
+        btn.textContent = orig; btn.disabled = false;
+        alert('Hash error: ' + (d.error || 'unknown'));
+      }
+    })
+    .catch(function(e){ btn.textContent = orig; btn.disabled = false; alert('Fetch failed: '+e); });
+}
 function updateContentForm() {
   var t = document.getElementById('ctype-sel').value;
   document.getElementById('cf-thumb').style.display = t==='map'     ? '' : 'none';
-  document.getElementById('cf-hash' ).style.display = t!=='map'     ? '' : 'none';  // maps use auto-computed thumbnail hash
+  document.getElementById('cf-hash' ).style.display = '';  // always show; Calc works for all types
   document.getElementById('cf-mat' ).style.display = t==='texture' ? '' : 'none';
   document.getElementById('cf-key' ).style.display = t==='data'    ? '' : 'none';
 }
