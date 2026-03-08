@@ -52,6 +52,17 @@ function init_schema(PDO $pdo): void {
             last_spin_at INTEGER NOT NULL,
             FOREIGN KEY (player_id) REFERENCES players(id)
         );
+        CREATE TABLE IF NOT EXISTS player_mail (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id  TEXT    NOT NULL,
+            subject    TEXT    NOT NULL DEFAULT '',
+            body       TEXT    NOT NULL DEFAULT '',
+            coins      INTEGER NOT NULL DEFAULT 0,
+            gems       INTEGER NOT NULL DEFAULT 0,
+            claimed    INTEGER NOT NULL DEFAULT 0,
+            sent_at    INTEGER NOT NULL,
+            FOREIGN KEY (player_id) REFERENCES players(id)
+        );
     ");
 }
 
