@@ -125,6 +125,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($act === 'add_content') {
+        $cid   = preg_replace('/[^a-z0-9_\-]/i', '_', trim($_POST['content_id']   ?? ''));
+        $ctype = in_array($_POST['ctype'] ?? '', ['map','texture','data']) ? $_POST['ctype'] : 'map';
+        $cname = trim($_POST['cname'] ?? '');
+        $curl  = trim($_POST['curl']  ?? '');
+        $base  = trim($_POST['base_scene']    ?? 'FreeRun3_1');
+        $mat   = trim($_POST['material_name'] ?? '');
+        $dkey  = trim($_POST['data_key']      ?? '');
+        $sort  = (int)($_POST['sort_order']   ?? 0);
+        if ($cid === '' || $curl === '') {
+            $flash = 'ID and URL are required.'; $flash_ok = false;
+        } else {
+            try {
+                $pdo->prepare(
+                    "INSERT INTO content_items (id,type,name,url,base_scene,material_name,data_key,sort_order,enabled,created_at)
+                     VALUES (?,?,?,?,?,?,?,?,1,?)"
+                )->execute([$cid,$ctype,$cname,$curl,$base,$mat,$dkey,$sort,time()]);
+                $flash = 'Content item "' . htmlspecialchars($cid) . '" added.';
+            } catch (Exception $e) {
+                $flash = 'Error: ' . $e->getMessage(); $flash_ok = false;
+            }
+        }
+    }
+
+    if ($act === 'toggle_content') {
+        $cid = trim($_POST['content_id'] ?? '');
+        $pdo->prepare("UPDATE content_items SET enabled = 1 - enabled WHERE id = ?")->execute([$cid]);
+        $flash = 'Toggled "' . htmlspecialchars($cid) . '".';
+    }
+
+    if ($act === 'delete_content') {
+        $cid = trim($_POST['content_id'] ?? '');
+        $pdo->prepare("DELETE FROM content_items WHERE id = ?")->execute([$cid]);
+        $flash = 'Deleted "' . htmlspecialchars($cid) . '".';
+    }
+
+    if ($act === 'reorder_content') {
+        $cid  = trim($_POST['content_id']  ?? '');
+        $sort = (int)($_POST['sort_order'] ?? 0);
+        $pdo->prepare("UPDATE content_items SET sort_order = ? WHERE id = ?")->execute([$sort,$cid]);
+        $flash = 'Sort order updated.';
+    }
+
     if ($act === 'grant') {
         $pid   = trim($_POST['player_id'] ?? '');
         $coins = (int)($_POST['coins']    ?? 0);
@@ -159,6 +202,12 @@ $total_players = (int)$pdo->query("SELECT COUNT(*) FROM players")->fetchColumn()
 $total_tx      = (int)$pdo->query("SELECT COUNT(*) FROM transactions")->fetchColumn();
 $total_mail    = (int)$pdo->query("SELECT COUNT(*) FROM player_mail")->fetchColumn();
 $unread_mail   = (int)$pdo->query("SELECT COUNT(*) FROM player_mail WHERE claimed=0")->fetchColumn();
+$total_content = (int)$pdo->query("SELECT COUNT(*) FROM content_items")->fetchColumn();
+
+$content_items = $pdo->query(
+    "SELECT id, type, name, url, base_scene, material_name, data_key, sort_order, enabled
+       FROM content_items ORDER BY type, sort_order ASC, created_at ASC"
+)->fetchAll(PDO::FETCH_ASSOC);
 
 $players = $pdo->query(
     "SELECT id, display_name, coins, gems, last_seen FROM players ORDER BY last_seen DESC LIMIT 200"
@@ -241,6 +290,7 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
   <div class="stat"><span>Transactions</span><strong><?= $total_tx ?></strong></div>
   <div class="stat"><span>Mail sent</span><strong><?= $total_mail ?></strong></div>
   <div class="stat"><span>Unclaimed mail</span><strong><?= $unread_mail ?></strong></div>
+  <div class="stat"><span>Content items</span><strong><?= $total_content ?></strong></div>
 </div>
 
 <!-- ── Send Mail ─────────────────────────────────────────────────────────── -->
@@ -320,6 +370,7 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
   <div class="tab active" onclick="showTab('players')">Players (<?= $total_players ?>)</div>
   <div class="tab" onclick="showTab('mail')">Mail Log (<?= $total_mail ?>)</div>
   <div class="tab" onclick="showTab('transactions')">Transactions</div>
+  <div class="tab" onclick="showTab('content')">Content (<?= $total_content ?>)</div>
 </div>
 
 <!-- Players tab -->
@@ -377,14 +428,153 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
   </table>
 </div>
 
+<!-- Content tab -->
+<div class="pane" id="pane-content">
+  <h2>Official Maps</h2>
+  <table id="content-map-tbl">
+    <tr><th>Sort</th><th>ID</th><th>Name</th><th>URL</th><th>Base scene</th><th>Status</th><th>Actions</th></tr>
+    <?php foreach ($content_items as $c): if ($c['type'] !== 'map') continue; ?>
+    <tr>
+      <td><?= (int)$c['sort_order'] ?></td>
+      <td><code><?= htmlspecialchars($c['id']) ?></code></td>
+      <td><?= htmlspecialchars($c['name']) ?></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td><?= htmlspecialchars($c['base_scene']) ?></td>
+      <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
+      <td>
+        <form method="POST" style="display:inline">
+          <input type="hidden" name="act" value="toggle_content">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit"><?= $c['enabled'] ? 'Disable' : 'Enable' ?></button>
+        </form>
+        <form method="POST" style="display:inline" onsubmit="return confirm('Delete this item?')">
+          <input type="hidden" name="act" value="delete_content">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit" style="color:#f85149">Delete</button>
+        </form>
+      </td>
+    </tr>
+    <?php endforeach; ?>
+  </table>
+
+  <h2>Texture Packs</h2>
+  <table id="content-tex-tbl">
+    <tr><th>Sort</th><th>ID</th><th>Material name</th><th>URL</th><th>Status</th><th>Actions</th></tr>
+    <?php foreach ($content_items as $c): if ($c['type'] !== 'texture') continue; ?>
+    <tr>
+      <td><?= (int)$c['sort_order'] ?></td>
+      <td><code><?= htmlspecialchars($c['id']) ?></code></td>
+      <td><?= htmlspecialchars($c['material_name']) ?></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
+      <td>
+        <form method="POST" style="display:inline">
+          <input type="hidden" name="act" value="toggle_content">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit"><?= $c['enabled'] ? 'Disable' : 'Enable' ?></button>
+        </form>
+        <form method="POST" style="display:inline" onsubmit="return confirm('Delete this item?')">
+          <input type="hidden" name="act" value="delete_content">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit" style="color:#f85149">Delete</button>
+        </form>
+      </td>
+    </tr>
+    <?php endforeach; ?>
+  </table>
+
+  <h2>Data Files</h2>
+  <table id="content-data-tbl">
+    <tr><th>Sort</th><th>ID</th><th>Data key</th><th>URL</th><th>Status</th><th>Actions</th></tr>
+    <?php foreach ($content_items as $c): if ($c['type'] !== 'data') continue; ?>
+    <tr>
+      <td><?= (int)$c['sort_order'] ?></td>
+      <td><code><?= htmlspecialchars($c['id']) ?></code></td>
+      <td><?= htmlspecialchars($c['data_key']) ?></td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
+      <td>
+        <form method="POST" style="display:inline">
+          <input type="hidden" name="act" value="toggle_content">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit"><?= $c['enabled'] ? 'Disable' : 'Enable' ?></button>
+        </form>
+        <form method="POST" style="display:inline" onsubmit="return confirm('Delete this item?')">
+          <input type="hidden" name="act" value="delete_content">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit" style="color:#f85149">Delete</button>
+        </form>
+      </td>
+    </tr>
+    <?php endforeach; ?>
+  </table>
+
+  <h2>Add Content Item</h2>
+  <details id="add-content-box">
+    <summary>Add new item</summary>
+    <div class="form-body">
+      <form method="POST">
+        <input type="hidden" name="act" value="add_content">
+        <div class="form-row">
+          <label>Type</label>
+          <select name="ctype" id="ctype-sel" onchange="updateContentForm()" style="max-width:130px">
+            <option value="map">map</option>
+            <option value="texture">texture</option>
+            <option value="data">data</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>ID</label>
+          <input type="text" name="content_id" placeholder="official_map_1" pattern="[a-zA-Z0-9_\-]+" required>
+        </div>
+        <div class="form-row">
+          <label>Name / label</label>
+          <input type="text" name="cname" placeholder="[Official] Rooftop Arena" maxlength="80">
+        </div>
+        <div class="form-row">
+          <label>URL</label>
+          <input type="url" name="curl" placeholder="https://cdn.example.com/maps/rooftop.json" required>
+        </div>
+        <div id="cf-base" class="form-row">
+          <label>Base scene</label>
+          <select name="base_scene">
+            <option value="FreeRun3_1">FreeRun3_1 (Death Platform)</option>
+            <option value="FreeRun5_1">FreeRun5_1 (Snow)</option>
+            <option value="FreeRun8_1">FreeRun8_1 (Desert A)</option>
+          </select>
+        </div>
+        <div id="cf-mat" class="form-row" style="display:none">
+          <label>Material name</label>
+          <input type="text" name="material_name" placeholder="pistol_body">
+        </div>
+        <div id="cf-key" class="form-row" style="display:none">
+          <label>Data key</label>
+          <input type="text" name="data_key" placeholder="weapons_config">
+        </div>
+        <div class="form-row">
+          <label>Sort order</label>
+          <input type="number" name="sort_order" value="0" style="max-width:80px">
+        </div>
+        <button type="submit">Add</button>
+      </form>
+    </div>
+  </details>
+</div>
+
 <script>
 function showTab(name) {
   document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('active', ['players','mail','transactions'][i]===name);
+    t.classList.toggle('active', ['players','mail','transactions','content'][i]===name);
   });
   document.querySelectorAll('.pane').forEach(p=>{
     p.classList.toggle('active', p.id==='pane-'+name);
   });
+}
+function updateContentForm() {
+  var t = document.getElementById('ctype-sel').value;
+  document.getElementById('cf-base').style.display = t==='map'     ? '' : 'none';
+  document.getElementById('cf-mat' ).style.display = t==='texture' ? '' : 'none';
+  document.getElementById('cf-key' ).style.display = t==='data'    ? '' : 'none';
 }
 function filterTable(id, q) {
   q = q.toLowerCase();

@@ -63,6 +63,18 @@ function init_schema(PDO $pdo): void {
             sent_at    INTEGER NOT NULL,
             FOREIGN KEY (player_id) REFERENCES players(id)
         );
+        CREATE TABLE IF NOT EXISTS content_items (
+            id            TEXT    PRIMARY KEY,
+            type          TEXT    NOT NULL DEFAULT 'map',
+            name          TEXT    NOT NULL DEFAULT '',
+            url           TEXT    NOT NULL DEFAULT '',
+            base_scene    TEXT    NOT NULL DEFAULT 'FreeRun3_1',
+            material_name TEXT    NOT NULL DEFAULT '',
+            data_key      TEXT    NOT NULL DEFAULT '',
+            sort_order    INTEGER NOT NULL DEFAULT 0,
+            enabled       INTEGER NOT NULL DEFAULT 1,
+            created_at    INTEGER NOT NULL DEFAULT 0
+        );
     ");
 }
 
