@@ -134,14 +134,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mat   = trim($_POST['material_name'] ?? '');
         $dkey  = trim($_POST['data_key']      ?? '');
         $sort  = (int)($_POST['sort_order']   ?? 0);
+        $fhash = strtolower(preg_replace('/[^a-fA-F0-9]/', '', trim($_POST['file_hash'] ?? '')));
         if ($cid === '' || $curl === '') {
             $flash = 'ID and URL are required.'; $flash_ok = false;
         } else {
             try {
                 $pdo->prepare(
-                    "INSERT INTO content_items (id,type,name,url,base_scene,material_name,data_key,sort_order,enabled,created_at)
-                     VALUES (?,?,?,?,?,?,?,?,1,?)"
-                )->execute([$cid,$ctype,$cname,$curl,$base,$mat,$dkey,$sort,time()]);
+                    "INSERT INTO content_items (id,type,name,url,base_scene,material_name,data_key,sort_order,enabled,created_at,file_hash)
+                     VALUES (?,?,?,?,?,?,?,?,1,?,?)"
+                )->execute([$cid,$ctype,$cname,$curl,$base,$mat,$dkey,$sort,time(),$fhash]);
                 // Handle optional thumbnail upload for maps
                 if ($ctype === 'map' && isset($_FILES['thumb_file']) && $_FILES['thumb_file']['error'] === UPLOAD_ERR_OK) {
                     $file    = $_FILES['thumb_file'];
@@ -153,8 +154,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
                         $dest = $upload_dir . $cid . '.' . $ext;
                         if (move_uploaded_file($file['tmp_name'], $dest)) {
-                            $thumb_url = 'https://play.jacqueb.me/economy/uploads/thumbnails/' . $cid . '.' . $ext;
-                            $pdo->prepare("UPDATE content_items SET thumbnail_url = ? WHERE id = ?")->execute([$thumb_url, $cid]);
+                            $thumb_url  = 'https://play.jacqueb.me/economy/uploads/thumbnails/' . $cid . '.' . $ext;
+                            $thumb_hash = md5_file($dest);
+                            $pdo->prepare("UPDATE content_items SET thumbnail_url = ?, thumbnail_hash = ? WHERE id = ?")
+                                ->execute([$thumb_url, $thumb_hash, $cid]);
                         }
                     }
                 }
@@ -184,6 +187,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flash = 'Sort order updated.';
     }
 
+    if ($act === 'update_hash') {
+        $cid  = trim($_POST['content_id'] ?? '');
+        $hash = strtolower(preg_replace('/[^a-fA-F0-9]/', '', trim($_POST['file_hash'] ?? '')));
+        if ($cid === '') { $flash = 'Missing ID.'; $flash_ok = false; }
+        else {
+            $pdo->prepare("UPDATE content_items SET file_hash = ? WHERE id = ?")->execute([$hash, $cid]);
+            $flash = 'Hash updated for "' . htmlspecialchars($cid) . '".';
+        }
+    }
+
     if ($act === 'upload_thumbnail') {
         $cid = preg_replace('/[^a-z0-9_\-]/i', '_', trim($_POST['content_id'] ?? ''));
         if ($cid === '') {
@@ -207,8 +220,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $dest = $upload_dir . $cid . '.' . $ext;
                 if (move_uploaded_file($file['tmp_name'], $dest)) {
-                    $thumb_url = 'https://play.jacqueb.me/economy/uploads/thumbnails/' . $cid . '.' . $ext;
-                    $pdo->prepare("UPDATE content_items SET thumbnail_url = ? WHERE id = ?")->execute([$thumb_url, $cid]);
+                    $thumb_url  = 'https://play.jacqueb.me/economy/uploads/thumbnails/' . $cid . '.' . $ext;
+                    $thumb_hash = md5_file($dest);
+                    $pdo->prepare("UPDATE content_items SET thumbnail_url = ?, thumbnail_hash = ? WHERE id = ?")->execute([$thumb_url, $thumb_hash, $cid]);
                     $flash = 'Thumbnail uploaded for "' . htmlspecialchars($cid) . '".';
                 } else {
                     $flash = 'File move failed (check server permissions).'; $flash_ok = false;
@@ -254,7 +268,7 @@ $unread_mail   = (int)$pdo->query("SELECT COUNT(*) FROM player_mail WHERE claime
 $total_content = (int)$pdo->query("SELECT COUNT(*) FROM content_items")->fetchColumn();
 
 $content_items = $pdo->query(
-    "SELECT id, type, name, url, thumbnail_url, material_name, data_key, sort_order, enabled
+    "SELECT id, type, name, url, thumbnail_url, file_hash, thumbnail_hash, material_name, data_key, sort_order, enabled
        FROM content_items ORDER BY type, sort_order ASC, created_at ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
@@ -481,16 +495,17 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
 <div class="pane" id="pane-content">
   <h2>Official Maps</h2>
   <table id="content-map-tbl">
-    <tr><th>Sort</th><th>ID</th><th>Name</th><th>URL</th><th>Thumbnail</th><th>Status</th><th>Actions</th></tr>
+    <tr><th>Sort</th><th>ID</th><th>Name</th><th>URL</th><th>Thumbnail</th><th>Hash</th><th>Status</th><th>Actions</th></tr>
     <?php foreach ($content_items as $c): if ($c['type'] !== 'map') continue; ?>
     <tr>
       <td><?= (int)$c['sort_order'] ?></td>
       <td><code><?= htmlspecialchars($c['id']) ?></code></td>
       <td><?= htmlspecialchars($c['name']) ?></td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
       <td>
         <?php if (!empty($c['thumbnail_url'])): ?>
           <img src="<?= htmlspecialchars($c['thumbnail_url']) ?>" style="max-width:64px;max-height:40px;border-radius:4px" loading="lazy">
+          <?php if (!empty($c['thumbnail_hash'])): ?><br><small style="color:#8b949e" title="thumbnail MD5"><?= substr(htmlspecialchars($c['thumbnail_hash']),0,8) ?>…</small><?php endif; ?>
         <?php else: ?>
           <span style="color:#8b949e">none</span>
         <?php endif; ?>
@@ -499,6 +514,21 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
           <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
           <input type="file" name="thumb_file" accept="image/*" style="display:none" id="tf-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>" onchange="this.form.submit()">
           <button type="button" class="action-btn" onclick="document.getElementById('tf-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>').click()">Upload</button>
+        </form>
+      </td>
+      <td style="white-space:nowrap">
+        <?php if (!empty($c['file_hash'])): ?>
+          <code title="<?= htmlspecialchars($c['file_hash']) ?>" style="color:#58a6ff"><?= substr(htmlspecialchars($c['file_hash']),0,8) ?>…</code>
+        <?php else: ?>
+          <span style="color:#8b949e">none</span>
+        <?php endif; ?>
+        <form method="POST" style="display:inline;margin-left:4px">
+          <input type="hidden" name="act" value="update_hash">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <input type="text" name="file_hash" placeholder="md5 hex" maxlength="32"
+                 style="width:90px;font-size:11px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 4px"
+                 value="<?= htmlspecialchars($c['file_hash'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit" style="font-size:11px">Set</button>
         </form>
       </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
@@ -520,13 +550,28 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
 
   <h2>Texture Packs</h2>
   <table id="content-tex-tbl">
-    <tr><th>Sort</th><th>ID</th><th>Material name</th><th>URL</th><th>Status</th><th>Actions</th></tr>
+    <tr><th>Sort</th><th>ID</th><th>Material name</th><th>URL</th><th>Hash</th><th>Status</th><th>Actions</th></tr>
     <?php foreach ($content_items as $c): if ($c['type'] !== 'texture') continue; ?>
     <tr>
       <td><?= (int)$c['sort_order'] ?></td>
       <td><code><?= htmlspecialchars($c['id']) ?></code></td>
       <td><?= htmlspecialchars($c['material_name']) ?></td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td style="white-space:nowrap">
+        <?php if (!empty($c['file_hash'])): ?>
+          <code title="<?= htmlspecialchars($c['file_hash']) ?>" style="color:#58a6ff"><?= substr(htmlspecialchars($c['file_hash']),0,8) ?>…</code>
+        <?php else: ?>
+          <span style="color:#8b949e">none</span>
+        <?php endif; ?>
+        <form method="POST" style="display:inline;margin-left:4px">
+          <input type="hidden" name="act" value="update_hash">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <input type="text" name="file_hash" placeholder="md5 hex" maxlength="32"
+                 style="width:90px;font-size:11px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 4px"
+                 value="<?= htmlspecialchars($c['file_hash'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit" style="font-size:11px">Set</button>
+        </form>
+      </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
       <td>
         <form method="POST" style="display:inline">
@@ -546,13 +591,28 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
 
   <h2>Data Files</h2>
   <table id="content-data-tbl">
-    <tr><th>Sort</th><th>ID</th><th>Data key</th><th>URL</th><th>Status</th><th>Actions</th></tr>
+    <tr><th>Sort</th><th>ID</th><th>Data key</th><th>URL</th><th>Hash</th><th>Status</th><th>Actions</th></tr>
     <?php foreach ($content_items as $c): if ($c['type'] !== 'data') continue; ?>
     <tr>
       <td><?= (int)$c['sort_order'] ?></td>
       <td><code><?= htmlspecialchars($c['id']) ?></code></td>
       <td><?= htmlspecialchars($c['data_key']) ?></td>
-      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
+      <td style="white-space:nowrap">
+        <?php if (!empty($c['file_hash'])): ?>
+          <code title="<?= htmlspecialchars($c['file_hash']) ?>" style="color:#58a6ff"><?= substr(htmlspecialchars($c['file_hash']),0,8) ?>…</code>
+        <?php else: ?>
+          <span style="color:#8b949e">none</span>
+        <?php endif; ?>
+        <form method="POST" style="display:inline;margin-left:4px">
+          <input type="hidden" name="act" value="update_hash">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <input type="text" name="file_hash" placeholder="md5 hex" maxlength="32"
+                 style="width:90px;font-size:11px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 4px"
+                 value="<?= htmlspecialchars($c['file_hash'],ENT_QUOTES) ?>">
+          <button class="action-btn" type="submit" style="font-size:11px">Set</button>
+        </form>
+      </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
       <td>
         <form method="POST" style="display:inline">
@@ -599,7 +659,12 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
         <div id="cf-thumb" class="form-row">
           <label>Thumbnail</label>
           <input type="file" name="thumb_file" accept="image/jpeg,image/png,image/gif,image/webp">
-          <small style="color:#8b949e;margin-left:8px">Optional (jpg/png, max 512 KB)</small>
+          <small style="color:#8b949e;margin-left:8px">Optional (jpg/png, max 512 KB) — hash auto-computed</small>
+        </div>
+        <div id="cf-hash" class="form-row">
+          <label>MD5 hash</label>
+          <input type="text" name="file_hash" placeholder="32-char hex (optional)" maxlength="32" pattern="[a-fA-F0-9]{0,32}">
+          <small style="color:#8b949e;margin-left:8px">Leave blank to skip hash checking for this item</small>
         </div>
         <div id="cf-mat" class="form-row" style="display:none">
           <label>Material name</label>
@@ -631,6 +696,7 @@ function showTab(name) {
 function updateContentForm() {
   var t = document.getElementById('ctype-sel').value;
   document.getElementById('cf-thumb').style.display = t==='map'     ? '' : 'none';
+  document.getElementById('cf-hash' ).style.display = t!=='map'     ? '' : 'none';  // maps use auto-computed thumbnail hash
   document.getElementById('cf-mat' ).style.display = t==='texture' ? '' : 'none';
   document.getElementById('cf-key' ).style.display = t==='data'    ? '' : 'none';
 }

@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $pdo = db();
 
 $rows = $pdo->query(
-    "SELECT id, type, name, url, thumbnail_url, material_name, data_key
+    "SELECT id, type, name, url, thumbnail_url, file_hash, thumbnail_hash, material_name, data_key
        FROM content_items
       WHERE enabled = 1
       ORDER BY type, sort_order ASC, created_at ASC"
@@ -31,10 +31,12 @@ foreach ($rows as $r) {
     switch ($r['type']) {
         case 'map':
             $maps[] = [
-                'id'            => $r['id'],
-                'name'          => $r['name'],
-                'url'           => $r['url'],
-                'thumbnail_url' => $r['thumbnail_url'] ?? '',
+                'id'             => $r['id'],
+                'name'           => $r['name'],
+                'url'            => $r['url'],
+                'thumbnail_url'  => $r['thumbnail_url']  ?? '',
+                'hash'           => $r['file_hash']      ?? '',
+                'thumbnail_hash' => $r['thumbnail_hash'] ?? '',
             ];
             break;
         case 'texture':
@@ -42,13 +44,15 @@ foreach ($rows as $r) {
                 'id'            => $r['id'],
                 'material_name' => $r['material_name'],
                 'url'           => $r['url'],
+                'hash'          => $r['file_hash'] ?? '',
             ];
             break;
         case 'data':
             $data[] = [
-                'id'  => $r['id'],
-                'key' => $r['data_key'],
-                'url' => $r['url'],
+                'id'   => $r['id'],
+                'key'  => $r['data_key'],
+                'url'  => $r['url'],
+                'hash' => $r['file_hash'] ?? '',
             ];
             break;
     }

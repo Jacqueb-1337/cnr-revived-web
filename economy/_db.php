@@ -76,8 +76,10 @@ function init_schema(PDO $pdo): void {
             created_at    INTEGER NOT NULL DEFAULT 0
         );
     ");
-    // Add thumbnail_url column to existing databases (idempotent)
+    // Add columns to existing databases (idempotent)
     try { $pdo->exec("ALTER TABLE content_items ADD COLUMN thumbnail_url TEXT NOT NULL DEFAULT ''"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE content_items ADD COLUMN file_hash TEXT NOT NULL DEFAULT ''"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE content_items ADD COLUMN thumbnail_hash TEXT NOT NULL DEFAULT ''"); } catch (Exception $e) {}
 }
 
 // ---------- response helpers -------------------------------------------------
