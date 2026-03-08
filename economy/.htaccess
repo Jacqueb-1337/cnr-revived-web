@@ -1,0 +1,14 @@
+# Protect admin.php with HTTP basic auth
+# Generate password: htpasswd -nb admin yourpassword  then paste hash below
+
+<Files "admin.php">
+    AuthType Basic
+    AuthName "CNR Admin"
+    AuthUserFile /path/to/.htpasswd
+    Require valid-user
+</Files>
+
+# Prevent direct access to _db.php
+<Files "_db.php">
+    Require all denied
+</Files>
