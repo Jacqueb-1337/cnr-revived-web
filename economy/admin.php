@@ -498,7 +498,7 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
           <input type="hidden" name="act" value="upload_thumbnail">
           <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
           <input type="file" name="thumb_file" accept="image/*" style="display:none" id="tf-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>" onchange="this.form.submit()">
-          <button type="button" class="action-btn" onclick="document.getElementById('tf-<?= htmlspecialchars($c['id'],ENT_ATTR) ?>').click()">Upload</button>
+          <button type="button" class="action-btn" onclick="document.getElementById('tf-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>').click()">Upload</button>
         </form>
       </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
