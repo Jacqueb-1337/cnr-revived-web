@@ -1,6 +1,81 @@
 <?php
-// admin.php — full admin dashboard (protected by HTTP Basic Auth in .htaccess)
-// Supports: player list, send mail, mail history, grant currency, recent transactions
+// admin.php — full admin dashboard with session-based login
+// To change the password, run:  php -r "echo password_hash('newpass', PASSWORD_DEFAULT);"
+// and replace the ADMIN_PASS_HASH constant below.
+
+define('ADMIN_PASS_HASH',
+    '\$2y\$10\$placeholderREPLACETHISHASHxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+);
+// ^ Replace the above with your real hash. Default password is set via LOGIN below.
+// If hash is still the placeholder, we fall back to checking ADMIN_PASS_PLAIN.
+define('ADMIN_PASS_PLAIN', 'cnradmin');  // change this if you haven't set a hash yet
+
+session_start();
+
+// ── Handle login / logout ────────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'login') {
+    $attempt = $_POST['password'] ?? '';
+    $ok = false;
+    if (strpos(ADMIN_PASS_HASH, 'placeholder') === false) {
+        $ok = password_verify($attempt, ADMIN_PASS_HASH);
+    } else {
+        $ok = ($attempt === ADMIN_PASS_PLAIN);
+    }
+    if ($ok) {
+        session_regenerate_id(true);
+        $_SESSION['cnr_admin'] = true;
+    } else {
+        $login_error = 'Incorrect password.';
+    }
+}
+if (($_GET['act'] ?? '') === 'logout') {
+    session_destroy();
+    header('Location: admin.php');
+    exit;
+}
+
+// ── Show login page if not authed ────────────────────────────────────────────
+if (empty($_SESSION['cnr_admin'])) {
+    $login_error = $login_error ?? '';
+    header('Content-Type: text/html; charset=utf-8');
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CNR Admin — Login</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:monospace;background:#0d1117;color:#c9d1d9;
+  display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;
+  padding:32px 36px;width:320px}
+h1{color:#58a6ff;font-size:18px;margin-bottom:24px;text-align:center}
+label{display:block;color:#8b949e;font-size:12px;margin-bottom:6px}
+input[type=password]{width:100%;background:#0d1117;border:1px solid #30363d;
+  border-radius:4px;color:#e6edf3;padding:9px 12px;font-size:14px;margin-bottom:16px}
+button{width:100%;background:#238636;border:1px solid #2ea043;border-radius:4px;
+  color:#fff;padding:10px;font-size:14px;font-weight:bold;cursor:pointer}
+button:hover{background:#2ea043}
+.err{color:#f85149;font-size:13px;margin-bottom:14px;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>CNR Economy Admin</h1>
+  <?php if ($login_error): ?>
+  <div class="err"><?= htmlspecialchars($login_error) ?></div>
+  <?php endif; ?>
+  <form method="POST">
+    <input type="hidden" name="act" value="login">
+    <label>Password</label>
+    <input type="password" name="password" autofocus autocomplete="current-password">
+    <button type="submit">Sign in</button>
+  </form>
+</div>
+</body></html>
+<?php
+    exit;
+}
 
 require __DIR__ . '/_db.php';
 
@@ -155,7 +230,7 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
 </style>
 </head>
 <body>
-<h1>CNR Economy Admin</h1>
+<h1>CNR Economy Admin &nbsp;<a href="admin.php?act=logout" style="font-size:12px;color:#8b949e;text-decoration:none;float:right;margin-top:4px">Sign out</a></h1>
 
 <?php if ($flash): ?>
 <div class="flash <?= $flash_ok ? 'ok' : 'err' ?>"><?= $flash ?></div>
