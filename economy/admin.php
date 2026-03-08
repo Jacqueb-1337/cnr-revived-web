@@ -19,11 +19,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $coins   = (int)($_POST['coins']    ?? 0);
         $gems    = (int)($_POST['gems']     ?? 0);
 
-        if ($pid === '' || $subject === '') {
-            $flash = 'Player and subject are required.'; $flash_ok = false;
+        if ($subject === '') {
+            $flash = 'Subject is required.'; $flash_ok = false;
+        } elseif ($pid === '*') {
+            // Global broadcast — insert a row for every registered player
+            $all = $pdo->query("SELECT id FROM players")->fetchAll();
+            $stmt = $pdo->prepare(
+                "INSERT INTO player_mail (player_id, subject, body, coins, gems, claimed, sent_at)
+                 VALUES (?, ?, ?, ?, ?, 0, ?)"
+            );
+            $now = time();
+            foreach ($all as $p) {
+                $stmt->execute([$p['id'], $subject, $body, max(0,$coins), max(0,$gems), $now]);
+            }
+            $flash = 'Global mail sent to ' . count($all) . ' players.';
+        } elseif ($pid === '') {
+            $flash = 'Select a player (or All Players).'; $flash_ok = false;
         } else {
-            $exists = $pdo->prepare("SELECT id FROM players WHERE id = ?")->execute([$pid]);
-            $row    = $pdo->prepare("SELECT id FROM players WHERE id = ?");
+            $row = $pdo->prepare("SELECT id FROM players WHERE id = ?");
             $row->execute([$pid]);
             if (!$row->fetch()) {
                 $flash = 'Player not found.'; $flash_ok = false;
@@ -165,6 +178,7 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
         <label>Player</label>
         <select name="player_id" id="mail-player" required style="max-width:300px">
           <option value="">— select a player —</option>
+          <option value="*" style="color:#f85149;font-weight:bold">★ ALL PLAYERS (global broadcast)</option>
           <?php foreach ($players as $p): ?>
           <option value="<?= htmlspecialchars($p['id']) ?>">
             <?= htmlspecialchars($p['display_name']) ?> (<?= htmlspecialchars(substr($p['id'],0,8)) ?>…)
