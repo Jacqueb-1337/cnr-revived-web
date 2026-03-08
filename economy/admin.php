@@ -142,6 +142,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "INSERT INTO content_items (id,type,name,url,base_scene,material_name,data_key,sort_order,enabled,created_at)
                      VALUES (?,?,?,?,?,?,?,?,1,?)"
                 )->execute([$cid,$ctype,$cname,$curl,$base,$mat,$dkey,$sort,time()]);
+                // Handle optional thumbnail upload for maps
+                if ($ctype === 'map' && isset($_FILES['thumb_file']) && $_FILES['thumb_file']['error'] === UPLOAD_ERR_OK) {
+                    $file    = $_FILES['thumb_file'];
+                    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+                    $mime    = mime_content_type($file['tmp_name']);
+                    if (isset($allowed[$mime]) && $file['size'] <= 512 * 1024) {
+                        $ext        = $allowed[$mime];
+                        $upload_dir = __DIR__ . '/uploads/thumbnails/';
+                        if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+                        $dest = $upload_dir . $cid . '.' . $ext;
+                        if (move_uploaded_file($file['tmp_name'], $dest)) {
+                            $thumb_url = 'https://play.jacqueb.me/economy/uploads/thumbnails/' . $cid . '.' . $ext;
+                            $pdo->prepare("UPDATE content_items SET thumbnail_url = ? WHERE id = ?")->execute([$thumb_url, $cid]);
+                        }
+                    }
+                }
                 $flash = 'Content item "' . htmlspecialchars($cid) . '" added.';
             } catch (Exception $e) {
                 $flash = 'Error: ' . $e->getMessage(); $flash_ok = false;
@@ -166,6 +182,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sort = (int)($_POST['sort_order'] ?? 0);
         $pdo->prepare("UPDATE content_items SET sort_order = ? WHERE id = ?")->execute([$sort,$cid]);
         $flash = 'Sort order updated.';
+    }
+
+    if ($act === 'upload_thumbnail') {
+        $cid = preg_replace('/[^a-z0-9_\-]/i', '_', trim($_POST['content_id'] ?? ''));
+        if ($cid === '') {
+            $flash = 'Missing item ID.'; $flash_ok = false;
+        } elseif (!isset($_FILES['thumb_file']) || $_FILES['thumb_file']['error'] !== UPLOAD_ERR_OK) {
+            $flash = 'Upload error (code ' . ($_FILES['thumb_file']['error'] ?? 'none') . ').'; $flash_ok = false;
+        } else {
+            $file    = $_FILES['thumb_file'];
+            $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp'];
+            $mime    = mime_content_type($file['tmp_name']);
+            if (!isset($allowed[$mime]) || $file['size'] > 512 * 1024) {
+                $flash = 'Invalid file type or too large (max 512 KB, jpg/png/gif/webp).'; $flash_ok = false;
+            } else {
+                $ext        = $allowed[$mime];
+                $upload_dir = __DIR__ . '/uploads/thumbnails/';
+                if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+                // Remove old thumbnail with any extension
+                foreach (['jpg','png','gif','webp'] as $e) {
+                    $old = $upload_dir . $cid . '.' . $e;
+                    if (file_exists($old)) unlink($old);
+                }
+                $dest = $upload_dir . $cid . '.' . $ext;
+                if (move_uploaded_file($file['tmp_name'], $dest)) {
+                    $thumb_url = 'https://play.jacqueb.me/economy/uploads/thumbnails/' . $cid . '.' . $ext;
+                    $pdo->prepare("UPDATE content_items SET thumbnail_url = ? WHERE id = ?")->execute([$thumb_url, $cid]);
+                    $flash = 'Thumbnail uploaded for "' . htmlspecialchars($cid) . '".';
+                } else {
+                    $flash = 'File move failed (check server permissions).'; $flash_ok = false;
+                }
+            }
+        }
     }
 
     if ($act === 'grant') {
@@ -205,7 +254,7 @@ $unread_mail   = (int)$pdo->query("SELECT COUNT(*) FROM player_mail WHERE claime
 $total_content = (int)$pdo->query("SELECT COUNT(*) FROM content_items")->fetchColumn();
 
 $content_items = $pdo->query(
-    "SELECT id, type, name, url, base_scene, material_name, data_key, sort_order, enabled
+    "SELECT id, type, name, url, thumbnail_url, material_name, data_key, sort_order, enabled
        FROM content_items ORDER BY type, sort_order ASC, created_at ASC"
 )->fetchAll(PDO::FETCH_ASSOC);
 
@@ -432,14 +481,26 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
 <div class="pane" id="pane-content">
   <h2>Official Maps</h2>
   <table id="content-map-tbl">
-    <tr><th>Sort</th><th>ID</th><th>Name</th><th>URL</th><th>Base scene</th><th>Status</th><th>Actions</th></tr>
+    <tr><th>Sort</th><th>ID</th><th>Name</th><th>URL</th><th>Thumbnail</th><th>Status</th><th>Actions</th></tr>
     <?php foreach ($content_items as $c): if ($c['type'] !== 'map') continue; ?>
     <tr>
       <td><?= (int)$c['sort_order'] ?></td>
       <td><code><?= htmlspecialchars($c['id']) ?></code></td>
       <td><?= htmlspecialchars($c['name']) ?></td>
       <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?= htmlspecialchars($c['url']) ?>"><?= htmlspecialchars($c['url']) ?></td>
-      <td><?= htmlspecialchars($c['base_scene']) ?></td>
+      <td>
+        <?php if (!empty($c['thumbnail_url'])): ?>
+          <img src="<?= htmlspecialchars($c['thumbnail_url']) ?>" style="max-width:64px;max-height:40px;border-radius:4px" loading="lazy">
+        <?php else: ?>
+          <span style="color:#8b949e">none</span>
+        <?php endif; ?>
+        <form method="POST" enctype="multipart/form-data" style="display:inline;margin-left:4px">
+          <input type="hidden" name="act" value="upload_thumbnail">
+          <input type="hidden" name="content_id" value="<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>">
+          <input type="file" name="thumb_file" accept="image/*" style="display:none" id="tf-<?= htmlspecialchars($c['id'],ENT_QUOTES) ?>" onchange="this.form.submit()">
+          <button type="button" class="action-btn" onclick="document.getElementById('tf-<?= htmlspecialchars($c['id'],ENT_ATTR) ?>').click()">Upload</button>
+        </form>
+      </td>
       <td class="<?= $c['enabled'] ? 'pos' : 'neg' ?>"><?= $c['enabled'] ? 'enabled' : 'disabled' ?></td>
       <td>
         <form method="POST" style="display:inline">
@@ -513,7 +574,7 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
   <details id="add-content-box">
     <summary>Add new item</summary>
     <div class="form-body">
-      <form method="POST">
+      <form method="POST" enctype="multipart/form-data">
         <input type="hidden" name="act" value="add_content">
         <div class="form-row">
           <label>Type</label>
@@ -535,13 +596,10 @@ input[type=search]{background:#161b22;border:1px solid #30363d;border-radius:4px
           <label>URL</label>
           <input type="url" name="curl" placeholder="https://cdn.example.com/maps/rooftop.json" required>
         </div>
-        <div id="cf-base" class="form-row">
-          <label>Base scene</label>
-          <select name="base_scene">
-            <option value="FreeRun3_1">FreeRun3_1 (Death Platform)</option>
-            <option value="FreeRun5_1">FreeRun5_1 (Snow)</option>
-            <option value="FreeRun8_1">FreeRun8_1 (Desert A)</option>
-          </select>
+        <div id="cf-thumb" class="form-row">
+          <label>Thumbnail</label>
+          <input type="file" name="thumb_file" accept="image/jpeg,image/png,image/gif,image/webp">
+          <small style="color:#8b949e;margin-left:8px">Optional (jpg/png, max 512 KB)</small>
         </div>
         <div id="cf-mat" class="form-row" style="display:none">
           <label>Material name</label>
@@ -572,7 +630,7 @@ function showTab(name) {
 }
 function updateContentForm() {
   var t = document.getElementById('ctype-sel').value;
-  document.getElementById('cf-base').style.display = t==='map'     ? '' : 'none';
+  document.getElementById('cf-thumb').style.display = t==='map'     ? '' : 'none';
   document.getElementById('cf-mat' ).style.display = t==='texture' ? '' : 'none';
   document.getElementById('cf-key' ).style.display = t==='data'    ? '' : 'none';
 }

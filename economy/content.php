@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $pdo = db();
 
 $rows = $pdo->query(
-    "SELECT id, type, name, url, base_scene, material_name, data_key
+    "SELECT id, type, name, url, thumbnail_url, material_name, data_key
        FROM content_items
       WHERE enabled = 1
       ORDER BY type, sort_order ASC, created_at ASC"
@@ -31,10 +31,10 @@ foreach ($rows as $r) {
     switch ($r['type']) {
         case 'map':
             $maps[] = [
-                'id'         => $r['id'],
-                'name'       => $r['name'],
-                'url'        => $r['url'],
-                'base_scene' => $r['base_scene'] ?: 'FreeRun3_1',
+                'id'            => $r['id'],
+                'name'          => $r['name'],
+                'url'           => $r['url'],
+                'thumbnail_url' => $r['thumbnail_url'] ?? '',
             ];
             break;
         case 'texture':
