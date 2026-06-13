@@ -1,0 +1,31 @@
+# VSCode SFTP / FTP credentials — NEVER commit these
+.vscode/sftp.json
+.vscode/SFTP.json
+
+# Other common sensitive/local files
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.htpasswd
+*.htpasswd.*
+config.local.php
+config.secret.php
+secrets.json
+credentials.json
+auth.json
+
+# SQLite databases (may contain player data)
+*.db
+*.sqlite
+*.sqlite3
+
+# Node / OS
+node_modules/
+.DS_Store
+Thumbs.db
