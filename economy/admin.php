@@ -8,19 +8,25 @@
 // Then replace the empty string below with the generated hash.
 define('ADMIN_PASS_HASH', '');
 
+// Block access entirely if the password hash has not been configured.
+if (ADMIN_PASS_HASH === '') {
+    http_response_code(503);
+    header('Content-Type: text/plain');
+    echo 'Admin panel is disabled: ADMIN_PASS_HASH is not set in admin.php.';
+    exit;
+}
+
 session_start();
 
 // ── Handle login / logout ────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'login') {
     $attempt = $_POST['password'] ?? '';
-    $ok = ADMIN_PASS_HASH !== '' && password_verify($attempt, ADMIN_PASS_HASH);
+    $ok = password_verify($attempt, ADMIN_PASS_HASH);
     if ($ok) {
         session_regenerate_id(true);
         $_SESSION['cnr_admin'] = true;
     } else {
-        $login_error = ADMIN_PASS_HASH === ''
-            ? 'Admin password not configured. Set ADMIN_PASS_HASH in admin.php.'
-            : 'Incorrect password.';
+        $login_error = 'Incorrect password.';
     }
 }
 if (($_GET['act'] ?? '') === 'logout') {
