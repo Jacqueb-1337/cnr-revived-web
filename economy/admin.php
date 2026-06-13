@@ -3,24 +3,25 @@
 // To change the password, run:  php -r "echo password_hash('newpass', PASSWORD_DEFAULT);"
 // and replace the ADMIN_PASS_HASH constant below.
 
-define('ADMIN_PASS_HASH',
-    '\$2y\$10\$placeholderREPLACETHISHASHxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-);
-// ^ Replace the above with your real hash. Default password is set via LOGIN below.
-// If hash is still the placeholder, we fall back to checking ADMIN_PASS_PLAIN.
-define('ADMIN_PASS_PLAIN', 'cnradmin');  // change this if you haven't set a hash yet
+// Set this to a bcrypt hash of your admin password.
+// Generate one with: php -r "echo password_hash('yourpassword', PASSWORD_DEFAULT);"
+// Then replace the empty string below with the generated hash.
+define('ADMIN_PASS_HASH', '');
+
+// Block access entirely if the password hash has not been configured.
+if (ADMIN_PASS_HASH === '') {
+    http_response_code(503);
+    header('Content-Type: text/plain');
+    echo 'Admin panel is disabled: ADMIN_PASS_HASH is not set in admin.php.';
+    exit;
+}
 
 session_start();
 
 // ── Handle login / logout ────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act'] ?? '') === 'login') {
     $attempt = $_POST['password'] ?? '';
-    $ok = false;
-    if (strpos(ADMIN_PASS_HASH, 'placeholder') === false) {
-        $ok = password_verify($attempt, ADMIN_PASS_HASH);
-    } else {
-        $ok = ($attempt === ADMIN_PASS_PLAIN);
-    }
+    $ok = password_verify($attempt, ADMIN_PASS_HASH);
     if ($ok) {
         session_regenerate_id(true);
         $_SESSION['cnr_admin'] = true;
