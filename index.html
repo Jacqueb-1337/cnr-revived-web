@@ -1,115 +1,213 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CNR Revived Web | Custom Multiplayer Server for Cops N Robbers</title>
-  <meta name="description" content="CNR Revived Web is the custom Node.js multiplayer backend for the Cops N Robbers Revival project, restoring room discovery, hosting, joining and live matches for the classic Android game.">
-  <meta name="robots" content="index,follow">
-  <link rel="canonical" href="https://jacqueb-1337.github.io/cnr-revived-web/">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="CNR Revived Web | Cops N Robbers Multiplayer Revival">
-  <meta property="og:description" content="Custom Node.js multiplayer services for the community Cops N Robbers Revival project.">
-  <meta property="og:url" content="https://jacqueb-1337.github.io/cnr-revived-web/">
-  <meta name="twitter:card" content="summary">
-  <script type="application/ld+json">
-  {
-    "@context":"https://schema.org",
-    "@type":"SoftwareSourceCode",
-    "name":"CNR Revived Web",
-    "codeRepository":"https://github.com/Jacqueb-1337/cnr-revived-web",
-    "url":"https://jacqueb-1337.github.io/cnr-revived-web/",
-    "programmingLanguage":"JavaScript",
-    "description":"Custom Node.js multiplayer backend for the Cops N Robbers Revival project."
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CNR Revival | Restored Cops N Robbers Multiplayer and Mods</title>
+<meta name="description" content="CNR Revival restores multiplayer, custom servers and mod support for the classic Cops N Robbers Android game, with Project V7 compatibility for modern 64-bit-only devices." />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://jacqueb-1337.github.io/cnr-revived-web/" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="CNR Revival | Cops N Robbers Multiplayer Restoration" />
+<meta property="og:description" content="Restored multiplayer, custom server support, mods and modern Android compatibility for Cops N Robbers." />
+<meta property="og:url" content="https://jacqueb-1337.github.io/cnr-revived-web/" />
+<style>
+  :root{
+    --bg:#0f1720; --card:#0b1220; --muted:#97a0b3;
+    --accent:#6ee7b7; --accent-2:#60a5fa; --glass:rgba(255,255,255,0.04);
+    --card-pad:22px; --radius:14px;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   }
-  </script>
-  <style>
-    :root{--bg:#0f1720;--card:#0b1220;--muted:#97a0b3;--accent:#6ee7b7;--accent2:#60a5fa;color-scheme:dark;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
-    *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#071226 0%,var(--bg) 62%);color:#e6eef8}
-    .wrap{max-width:1050px;margin:auto;padding:42px 22px 70px}
-    header{display:flex;gap:18px;align-items:center;padding-bottom:26px}
-    .logo{width:68px;height:68px;border-radius:14px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:800;color:#04233a;font-size:20px}
-    h1{margin:0;font-size:clamp(1.9rem,5vw,3rem)} .subtitle{color:var(--muted);margin-top:6px;line-height:1.5}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0 32px}
-    .btn{display:inline-block;padding:10px 14px;border-radius:10px;text-decoration:none;border:1px solid rgba(255,255,255,.09);color:#e6eef8;background:rgba(255,255,255,.04)}
-    .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#052233;font-weight:700;border:0}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.008));border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:24px;margin-top:20px;box-shadow:0 8px 36px rgba(2,8,20,.35)}
-    h2{margin-top:0} h3{margin-bottom:7px} p,li{line-height:1.7;color:#c8d1dd}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-    .feature{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);border-radius:10px;padding:16px}
-    .feature p{margin-bottom:0}
-    .status{display:inline-block;background:rgba(110,231,183,.1);color:#8df0cb;border:1px solid rgba(110,231,183,.25);border-radius:999px;padding:5px 9px;font-size:.84rem}
-    .credit{border-left:4px solid var(--accent2);padding-left:17px}
-    a{color:#76b7ff} code{background:#111b28;padding:2px 5px;border-radius:5px}
-    footer{margin-top:34px;color:var(--muted);font-size:.9rem}
-    @media(max-width:720px){header{align-items:flex-start}.grid{grid-template-columns:1fr}.wrap{padding-top:24px}}
-  </style>
+  *{box-sizing:border-box}
+  html{
+    height: 100%;
+  }
+  body{
+    margin:0;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(1200px 600px at 10% 10%, rgba(96,165,250,0.06), transparent 6%),
+      linear-gradient(180deg, #071226 0%, var(--bg) 60%);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-attachment: scroll;
+    color:#e6eef8;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    padding:40px; display:flex; justify-content:center; align-items:flex-start;
+    font-size:15px;
+    min-height: 100vh;
+  }
+  .wrap{max-width:1100px; width:100%; display:grid; grid-template-columns:1fr 380px; gap:22px}
+  header{grid-column:1 / -1; display:grid; gap:18px}
+  .header-top{display:flex; align-items:center; gap:18px}
+  .header-buttons{display:flex; gap:8px; flex-wrap:wrap}
+  .logo{width:64px; height:64px; border-radius:12px; background:linear-gradient(135deg,var(--accent-2),var(--accent));
+    display:flex; align-items:center; justify-content:center; font-weight:700; color:#04233a; font-size:20px;
+    box-shadow:0 6px 22px rgba(12,22,40,0.6), inset 0 -6px 18px rgba(255,255,255,0.02);}
+  h1{margin:0; font-size:20px}
+  .subtitle{color:var(--muted); font-size:13px; margin-top:4px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.008));
+    border-radius:var(--radius); padding:var(--card-pad); box-shadow:0 8px 40px rgba(2,8,20,0.6); border:1px solid rgba(255,255,255,0.03)}
+  .intro{line-height:1.5}
+  .hero-cta{display:flex; gap:10px; margin-top:18px; flex-wrap:wrap}
+  .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#052233; padding:10px 14px; border-radius:10px; font-weight:600; text-decoration:none}
+  .ghost{background:transparent; color:var(--muted); padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); text-decoration:none}
+  .danger{border-color:rgba(255,99,99,0.35); color:#ffbdbd}
+  .progress-wrap{margin-top:18px}
+  .progress-bar{width:100%; height:14px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,0.02)}
+  .progress-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .4s ease}
+  .task-list{margin-top:14px; display:grid; gap:10px}
+  .task{display:flex; gap:12px; align-items:flex-start; background:var(--glass); padding:10px; border-radius:10px; border:1px solid rgba(255,255,255,0.02)}
+  .task input[type="checkbox"]{transform:scale(1.15); margin-top:2px}
+  .task .meta{flex:1}
+  .task .meta b{display:block}
+  .task small{color:var(--muted)}
+  .tags{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap}
+  .tag{background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:999px; color:var(--muted); font-size:12px}
+  .panel h3{margin:0 0 10px 0}
+  .panel p{color:var(--muted); margin:0 0 10px 0}
+  .repo-list{display:flex; flex-direction:column; gap:10px}
+  .repo{display:flex; justify-content:space-between; align-items:center; padding:10px; border-radius:10px; background:rgba(255,255,255,0.02)}
+  .small{font-size:13px; color:var(--muted)}
+  footer{grid-column:1 / -1; margin-top:10px; color:var(--muted); font-size:13px; text-align:center}
+  .hidden{display:none !important}
+  .disabled{opacity:0.55; cursor:not-allowed}
+  @media (max-width:980px){.wrap{grid-template-columns:1fr} body{padding:20px}}
+</style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="logo">CNR</div>
-    <div>
-      <div class="status">Multiplayer revival backend</div>
-      <h1>CNR Revived Web</h1>
-      <div class="subtitle">Custom server infrastructure for the Cops N Robbers Revival project.</div>
-    </div>
-  </header>
+  <div class="wrap">
+    <header>
+      <div class="header-top">
+        <img class="logo" src="icon.png" alt="CNR Revival Logo">
+        <div style="flex:1">
+          <h1>CNR Revival - Cops n Robbers</h1>
+          <div class="subtitle">Reverse-engineering and multiplayer restoration • <span id="status-badge">✅ Complete</span></div>
+        </div>
+      </div>
+      <div class="header-buttons">
+        <a class="btn" href="https://github.com/Jacqueb-1337/copsnrobbers/releases/latest/" target="_blank" rel="noopener">Download</a>
+        <a class="ghost" href="https://github.com/Jacqueb-1337/copsnrobbers" target="_blank" rel="noopener">GitHub Repo</a>
+      </div>
+    </header>
 
-  <div class="actions">
-    <a class="btn primary" href="https://github.com/Jacqueb-1337/copsnrobbers/releases/latest">Download CNR Revival</a>
-    <a class="btn" href="https://github.com/Jacqueb-1337/cnr-revived-web">Server source</a>
-    <a class="btn" href="https://jacqueb-1337.github.io/copsnrobbers/">Full CNR Revival project</a>
+    <!-- left column -->
+    <main class="card">
+      <section class="intro">
+        <p><strong>Project scope:</strong> community effort to restore online functionality for <em>Cops n Robbers</em> by implementing modern matchmaking and networking while preserving original gameplay behavior.</p>
+        <p class="small" style="line-height:1.6">The revival uses a replacement Node.js multiplayer backend, client-side server redirection, and a reusable C# mod loader. The goal is to keep the original Android game playable instead of replacing it with a remake.</p>
+        <div class="hero-cta">
+          <a class="ghost" href="#progress">Progress tracker</a>
+          <a class="ghost" href="#contribute">Contributions</a>
+        </div>
+      </section>
+
+      <section id="progress" class="progress-wrap">
+        <h2 style="margin-top:18px">Progress</h2>
+        <div class="small" style="margin-top:6px">Completion: <strong id="percent">0%</strong></div>
+        <div style="margin-top:10px" class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+        <div class="task-list" id="tasks"></div>
+
+      </section>
+
+      <section id="contribute" style="margin-top:20px">
+        <h2>It's done!</h2>
+        <p class="small" style="line-height:1.6">All milestones are complete. Multiplayer is fully restored using a custom Node.js server - Photon was tricked into TCP mode so no UDP translation was needed. A generic mod loader is baked into the APK, and mods (including a full in-game HUD editor) are loaded dynamically from the device at runtime.</p>
+        <div class="hero-cta">
+          <a class="btn" href="https://github.com/Jacqueb-1337/copsnrobbers/releases/latest/" target="_blank" rel="noopener">Download latest release</a>
+        </div>
+      </section>
+    </main>
+
+    <!-- right column -->
+    <aside class="card panel">
+      <h3>Quick status</h3>
+      <p class="small">Key milestones and their state.</p>
+
+      <div class="repo-list">
+        <div class="repo"><div><div style="font-weight:600">Deobfuscated class names</div><div class="small">Completed</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Injected custom C# DLL</div><div class="small">Completed</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Discovery packets</div><div class="small">Completed (app ↔ custom matchmaking)</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Custom room list</div><div class="small">Populated from Node.js server</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Room loading / joining</div><div class="small">Complete - Photon runs in TCP mode</div></div><div class="tag">Done</div></div>
+        <div class="repo"><div><div style="font-weight:600">Live matches end-to-end</div><div class="small">Full gameplay validated</div></div><div class="tag">Done</div></div>
+      </div>
+
+      <div style="margin-top:18px">
+        <h3>Modern Android</h3>
+        <p class="small">The original game is 32-bit ARMv7. On supported 64-bit-only Android devices, <a href="https://jacqueb-1337.github.io/project-v7/" target="_blank" rel="noopener">Project V7</a> provides the compatibility layer used by the revival. <a href="https://github.com/Jacqueb-1337/project-v7" target="_blank" rel="noopener">Source</a></p>
+      </div>
+
+      <div style="margin-top:18px">
+        <h3>Download</h3>
+        <p class="small">Patched APK, mod DLLs, and server are all available on the releases page.</p>
+        <a class="btn" style="display:inline-block;margin-top:10px" href="https://github.com/Jacqueb-1337/copsnrobbers/releases/latest/" target="_blank" rel="noopener">Latest release →</a>
+      </div>
+    </aside>
+
+    <footer class="small card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>© CNR Revival · Modern Android compatibility by <a href="https://jacqueb-1337.github.io/project-v7/" target="_blank" rel="noopener">Project V7</a></div>
+        <div><a href="https://github.com/Jacqueb-1337/copsnrobbers" target="_blank" rel="noopener">github.com/Jacqueb-1337/copsnrobbers</a></div>
+      </div>
+    </footer>
   </div>
 
-  <section class="card">
-    <h2>What is CNR Revived Web?</h2>
-    <p>CNR Revived Web is the replacement multiplayer backend built for the community Cops N Robbers Revival project. The original Android client expected online services that are no longer available, so the revival project reverse engineered the client-server behavior and recreated the pieces needed for multiplayer.</p>
-    <p>The server is written in Node.js and implements the master-server and game-server flows required by the revived client. Its purpose is preservation: keep the original game's multiplayer behavior usable without replacing the game itself with a remake.</p>
-  </section>
+<script>
+/* ---------------- State ---------------- */
+const initialTasks = [
+  {id:1, title:"Deobfuscated class names", notes:"Mapped runtime types", done:true, tags:["analysis","reverse"]},
+  {id:2, title:"Injected custom C# DLL", notes:"Generic mod loader baked into APK", done:true, tags:["injection","csharp"]},
+  {id:3, title:"Discovery packets working", notes:"App ↔ custom matchmaking server", done:true, tags:["network","tcp"]},
+  {id:4, title:"Custom room listing populated", notes:"Room list rendered from Node.js server", done:true, tags:["ui","server"]},
+  {id:5, title:"Protocol implementation", notes:"Photon forced into TCP mode - Node.js handles all traffic natively", done:true, tags:["network","protocol"]},
+  {id:6, title:"Room loading & joining", notes:"Join/host flow + handshake complete", done:true, tags:["network","handshake"]},
+  {id:7, title:"Live matches end-to-end", notes:"Full gameplay over custom server validated", done:true, tags:["test","net"]},
+  {id:8, title:"HUD editor & mod system", notes:"In-game HUD position/scale editor + mod loader", done:true, tags:["mods","ui"]},
+  {id:9, title:"Docs & README", notes:"Setup instructions, mod loader docs, APK patching guide", done:true, tags:["docs"]},
+  {id:10, title:"Public release", notes:"Patched APK + server available on GitHub releases", done:true, tags:["release"]},
+];
 
-  <section class="card">
-    <h2>Restored multiplayer features</h2>
-    <div class="grid">
-      <div class="feature"><h3>Room discovery</h3><p>The revived client can retrieve a room list from the custom backend instead of relying on the discontinued original service.</p></div>
-      <div class="feature"><h3>Hosting and joining</h3><p>The server handles the flow required to create rooms, redirect clients and join multiplayer sessions.</p></div>
-      <div class="feature"><h3>Live matches</h3><p>End-to-end gameplay has been validated through the replacement multiplayer stack.</p></div>
-      <div class="feature"><h3>Photon-era protocol behavior</h3><p>The server reproduces the networking behavior expected by the original Unity client, including the TCP-based path used by the revival.</p></div>
-    </div>
-  </section>
+const tasksEl = document.getElementById('tasks');
+const progressFill = document.getElementById('progressFill');
+const percentEl = document.getElementById('percent');
 
-  <section class="card">
-    <h2>How it connects to the main CNR Revival project</h2>
-    <p>The server is one part of a larger preservation stack. The <a href="https://jacqueb-1337.github.io/copsnrobbers/">Cops N Robbers Revival project</a> contains the revived client work, mod loader, gameplay-side modifications, release builds and reverse-engineering documentation.</p>
-    <p>The revived client uses a mod layer to redirect multiplayer traffic to the replacement server. Other modules provide features such as an in-game settings and HUD editor and optional recording support.</p>
-  </section>
+function escapeHtml(s){
+  if(!s) return '';
+  return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
-  <section class="card">
-    <h2>Project V7 attribution and modern Android support</h2>
-    <div class="credit">
-      <p>The original Cops N Robbers game is a legacy 32-bit ARMv7 Android application. Current 64-bit-only Android devices may not be able to launch it natively.</p>
-      <p><strong><a href="https://jacqueb-1337.github.io/project-v7/">Project V7</a> provides the compatibility work used to run supported legacy 32-bit Android software, including Cops N Robbers, on modern 64-bit-only devices.</strong> Project V7 is developed as a separate open-source Android compatibility project and is an important part of the current preservation path.</p>
-      <p><a href="https://github.com/Jacqueb-1337/project-v7">Project V7 source code</a></p>
-    </div>
-  </section>
+function calcPercent(list){
+  const total = list.length || 1;
+  const done = list.filter(t=>t.done).length;
+  return Math.round(done/total*100);
+}
 
-  <section class="card">
-    <h2>Technical overview</h2>
-    <p>The server uses Node.js and exposes separate master and game services. In the current revival architecture, the master side handles discovery and room-related coordination while the game side carries in-room traffic.</p>
-    <p>The wider CNR Revival work includes reverse engineering of the original Unity and Photon-era client behavior, custom C# injection and runtime mod loading. That allows the server and client compatibility layers to evolve independently.</p>
-  </section>
+function render(){
+  // Render tasks
+  tasksEl.innerHTML = '';
+  initialTasks.forEach(t=>{
+    const div = document.createElement('div');
+    div.className = 'task';
+    div.innerHTML = `
+      <input type="checkbox" ${t.done? 'checked':''} disabled />
+      <div class="meta">
+        <b class="title">${escapeHtml(t.title)}</b>
+        <small class="notes">${escapeHtml(t.notes||'')}</small>
+        <div class="tags">${(t.tags||[]).map(x=>'<span class="tag">'+escapeHtml(x)+'</span>').join('')}</div>
+      </div>
+    `;
+    tasksEl.appendChild(div);
+  });
 
-  <section class="card">
-    <h2>Related links</h2>
-    <p><a href="https://jacqueb-1337.github.io/copsnrobbers/">Cops N Robbers Revival overview</a></p>
-    <p><a href="https://github.com/Jacqueb-1337/copsnrobbers">Cops N Robbers Revival source repository</a></p>
-    <p><a href="https://github.com/Jacqueb-1337/cnr-revived-web">CNR Revived Web source repository</a></p>
-    <p><a href="https://jacqueb-1337.github.io/project-v7/">Project V7 32-bit Android compatibility project</a></p>
-  </section>
+  const percent = calcPercent(initialTasks);
+  progressFill.style.width = percent + '%';
+  percentEl.textContent = percent + '%';
+}
 
-  <footer>
-    CNR Revived Web and Cops N Robbers Revival are community preservation projects. They do not claim ownership of the original game or its assets. Original rights remain with their respective owners.
-  </footer>
-</div>
+/* init */
+render();
+</script>
 </body>
 </html>
